@@ -204,8 +204,8 @@ struct stcp_secure_options
     const char *ca_file;        /* CA file fo rpeers */
     int  protocol_version;      /* 0 == default */
     int short_trust;            /* 0 == no */
-    int verifyPeer;             /* 0 == no, 1 == yes, 2 == optional */
-    char *default_verify_path;
+    int verify_peer;            /* 0 == no, 1 == yes, 2 == optional */
+    int default_verify_path;    /* 0 == no, 1 == yes */
     int verify_depth;           /* Set to zero for default */
     char *chipher_list;         /* NULL for default */
 
