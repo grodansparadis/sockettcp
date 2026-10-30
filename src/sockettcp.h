@@ -1,7 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 // sockettcp.h:
 //
-// This file is part of the VSCP (http://www.vscp.org) 
+// This file is part of the VSCP (https://www.vscp.org) 
 //
 // The MIT License (MIT)
 // 
@@ -9,7 +9,8 @@
 // Copyright (c) 2013-2017 the Civetweb developers
 //
 // Adopted for VSCP, Small changes  additions
-// Copyright (c) 2018 Ake Hedman, Grodans Paradis AB <info@grodansparadis.com>
+// Copyright (C) 2018-2023 Ake Hedman, the VSCP project
+// <info@vscp.org>
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -32,6 +33,10 @@
 #ifndef __sockettcp_h
 #define __sockettcp_h
 
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+
 #include <stdio.h>
 #include <stddef.h>
 
@@ -41,7 +46,10 @@ extern "C" {
 
 #include <sys/types.h>
 #if defined(_WIN32)
+#include <winsock2.h>
+#include <ws2def.h>
 #include <Ws2ipdef.h>
+#include <ws2tcpip.h>
 #else
 #include <sys/socket.h>
 #include <netinet/ip.h>
@@ -87,7 +95,7 @@ extern "C" {
                                                    will be sent as soon as possible instead of waiting for a 
                                                    full buffer or timeout to occur.
                                                    (Not the same as socket option typedef TCP_NODELAY) 
-                                                 */
+                                                */
 
 #define STCP_SSL_PROTOCOL_VERSION        (0)
 #define STCP_SSL_DO_VERIFY_PEER          (0)    /* 0 == no, 1 == mandatory, 2 == optional */
@@ -160,8 +168,9 @@ union usa
 
 /* 
     Describes a string (chunk of memory).
+    Named stcp_msg to avoid conflict with macOS sys/msg.h
 */
-struct msg
+struct stcp_msg
 {
     const char *ptr;
     size_t len;
@@ -304,6 +313,11 @@ stcp_connect_remote_secure( const char *host,
                                 int timeout );
 
 /*!
+    Allocate connection storage for connection.
+*/
+struct stcp_connection *stcp_new_connection(void);
+
+/*!
  * Close connection
  */ 
 void
@@ -340,7 +354,7 @@ stcp_read( struct stcp_connection *conn, void *buf, size_t len, int mstimeout );
  */
 
 int
-stcp_write( struct stcp_connection *conn, const void *buf, size_t len );
+stcp_write(struct stcp_connection *conn, const void *buf, size_t len );
 
 
 /*!
@@ -348,15 +362,15 @@ stcp_write( struct stcp_connection *conn, const void *buf, size_t len );
  * @param pfd Array with socket descriptors
  * @param n number of descriptors
  * @param mstimeout Number of milliseconds to wait or action
- * @stop_server Pointer to variable that if set to non zero will return
+ * @param stop_server Pointer to variable that if set to non zero will return
  *              immediately.
  * @return >0 success (descriptor causing action), -1 timeout, -2 stopped
  */
 int
-stcp_poll( struct pollfd *pfd,
+stcp_poll(struct pollfd *pfd,
                 unsigned int n,
                 int mstimeout,
-                volatile int *stop_server );
+                volatile int *stop_server);
 
 
 
@@ -371,8 +385,8 @@ stcp_poll( struct pollfd *pfd,
 */
 
 int
-stcp_listening( struct server_context *srv_ctx, 
-                    const char *str_listening_port );
+stcp_listening(struct server_context *srv_ctx, 
+                    const char *str_listening_port);
 
 /*!
  * Accept new connection (called after poll)
@@ -385,16 +399,35 @@ stcp_listening( struct server_context *srv_ctx,
  */
 
 int
-stcp_accept( struct server_context *srv_ctx,
+stcp_accept(struct server_context *srv_ctx,
                 const struct socket *listener, 
-                struct socket *psocket );                 
+                struct socket *psocket);               
+
+/*!
+ * Close all listening sockets
+ * 
+ * @parm srv_ctx Pointer to server context
+ */
+void
+
+stcp_close_all_listening_sockets(struct server_context *srv_ctx);
 
 /*!
     INit data for a connected client (after accept)
     @param conn Pointer to client connection object
+    TODO args docs
 */
 void stcp_init_client_connection( struct stcp_connection *conn,
                                     struct stcp_secure_options *secure_opts );
+
+/*!
+    Get address from connection (socket)
+
+    @param conn Pointer to client connection object
+    @param buf Character buffer that will receive address
+    @param len Size of address buffer
+*/
+int stcp_socket_get_address(struct stcp_connection *conn, char *buf, size_t len);
 
 #ifdef __cplusplus
 }
